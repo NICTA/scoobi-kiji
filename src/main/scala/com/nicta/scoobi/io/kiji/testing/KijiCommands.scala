@@ -41,6 +41,10 @@ trait KijiCommands {
   def onTable[A](tableName: String, layout: String)(onTable: RunKijiOperations[Result])(implicit sc: ScoobiConfiguration): Result =
     instance(table(tableName, layout)(onTable)).run(sc)
 
+  /** configure layout for additional tables, then open a table with the specific name and layout and execute Kiji operations on this table */
+  def onTableWith[A](tableName: String, layout: String)(additionalTables: (String, String)*)(onTable: RunKijiOperations[Result])(implicit sc: ScoobiConfiguration): Result =
+    instance(tables(additionalTables:_*) >> (table(tableName, layout)(onTable))).run(sc)
+
   /** @return a put operation */
   def put(id: AnyRef, family: String, qualifier: String, value: Any): RunKijiOperations[Unit] =
     RunKijiOperations(ops => ops.put(id, family, qualifier, value))
@@ -111,6 +115,17 @@ trait KijiCommands {
     val table = kiji.openTable(tableName)
     try runOnTable(onTable)(table)
     finally table.release
+  }
+
+  /**
+   * ensure that table has been created wit specified layout for a Kiji table
+   */
+  def tables(tables: (String, String)*): KijiInstance[Unit] = withKiji { kiji =>
+    tables.foreach({
+      case (name, layout) =>
+        if (!kiji.getTableNames.contains(name))
+          kiji.createTable(createLayout(layout).getDesc)
+    })
   }
 
   /** concrete implementation on the existing Kiji instance and currently opened table */
