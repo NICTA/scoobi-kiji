@@ -41,7 +41,7 @@ object build extends Build {
                testingSettings          ++
                publicationSettings      ++
                releaseSettings
-  ) 
+  )
 
   lazy val scoobiKijiVersion = SettingKey[String]("scoobi-kiji-version", "defines the current Scoobi-Kiji version")
   lazy val scoobiSettings: Seq[Settings] = Seq(
@@ -52,7 +52,7 @@ object build extends Build {
 
   lazy val dependenciesSettings: Seq[Settings] = Seq(
     libraryDependencies ++= Seq(
-      "com.nicta"              %% "scoobi"          % "0.7.0-cdh4-SNAPSHOT",
+      "com.nicta"              %% "scoobi"          % "0.7.0-RC1-cdh4",
       "org.kiji.schema"        %  "kiji-schema"     % "1.0.3",
       "org.kiji.mapreduce"     %  "kiji-mapreduce"  % "1.0.0-rc62"       % "provided",
       "org.apache.hbase"       %  "hbase"           % "0.94.3",
@@ -60,9 +60,8 @@ object build extends Build {
       "org.easymock"           %  "easymock"        % "3.1"              ,
       "org.kiji.schema"        %  "kiji-schema"     % "1.0.3"            classifier "tests",
       "org.kiji.testing"       %  "fake-hbase_2.10" % "0.0.5"            ,
-      "org.specs2"             %% "specs2"          % "2.0-RC2-SNAPSHOT",
+      "org.specs2"             %% "specs2"          % "2.0-RC1",
       "org.mockito"            %  "mockito-all"     % "1.9.0"),
-
     resolvers ++= Seq(
       "wibidata" at "https://repo.wibidata.com/artifactory/kiji",
       "sonatype-releases" at "http://oss.sonatype.org/content/repositories/releases",
@@ -228,5 +227,3 @@ object build extends Build {
   }
 
 }
-
-

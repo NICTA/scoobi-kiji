@@ -34,8 +34,8 @@ trait KijiCommands {
   protected val layoutDir = "src/test/resources/layout/"
 
   /** create a layout from the layout directory */
-  def createLayout(layout: String)  =
-    KijiTableLayout.createFromEffectiveJson(new FileInputStream(layoutDir+layout))
+  def createLayout(layout: String, dir: String = layoutDir) =
+    KijiTableLayout.createFromEffectiveJson(new FileInputStream(dir + layout))
 
   /** open a table with a specific name and layout and execute Kiji operations on this table */
   def onTable[A](tableName: String, layout: String)(onTable: RunKijiOperations[Result])(implicit sc: ScoobiConfiguration): Result =
