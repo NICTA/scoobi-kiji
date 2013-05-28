@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+
+ THIS POM FILE IS NOT USED TO BUILD SCOOBI OR USED AS AN EXAMPLE OF POM FILE FOR A SCOOBI PROJECT!
+ IT IS ONLY USED FOR ITS PLUGINS: SONAR AND LICENSE
+
+-->
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.nicta</groupId>
+    <artifactId>scoobi-kiji</artifactId>
+    <packaging>jar</packaging>
+    <version>0.1</version>
+    <name>scoobi-kiji</name>
+    <organization>
+        <name>com.nicta</name>
+    </organization>
+    <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>com.mycila.maven-license-plugin</groupId>
+                <artifactId>maven-license-plugin</artifactId>
+                <configuration>
+                    <header>notes/header.txt</header>
+                    <includes>
+                        <include>src/**/*.scala</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
