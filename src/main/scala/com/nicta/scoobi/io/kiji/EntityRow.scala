@@ -9,7 +9,6 @@ import org.kiji.schema.layout.KijiTableLayout
 import scala.collection.JavaConversions._
 import org.kiji.schema.impl.{HBaseKijiTable, HBaseKijiRowData}
 import org.apache.hadoop.hbase.client.Result
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import KijiFormat._
 
 /**
@@ -36,7 +35,13 @@ object EntityRow {
     def toEntityId(v: EntityRow) = v.entityId
   }
 
-  implicit def entityValueHasWireFormat(layout: KijiTableLayout, table: KijiTable, request: KijiDataRequest): WireFormat[EntityRow] = new WireFormat[EntityRow] {
+  def entityValueHasWireFormat(table: KijiTable, request: KijiDataRequest): EntityValueWireFormat =
+    entityValueHasWireFormat(table.getKiji.getURI, table.getURI, table.getLayout, request)
+
+  implicit def entityValueHasWireFormat(instanceUri: KijiURI, tableUri: KijiURI, layout: KijiTableLayout, request: KijiDataRequest): EntityValueWireFormat =
+    EntityValueWireFormat(instanceUri, tableUri, layout, request)
+
+  case class EntityValueWireFormat(instanceUri: KijiURI, tableUri: KijiURI, layout: KijiTableLayout, request: KijiDataRequest) extends WireFormat[EntityRow] {
     implicit val entityIdWf = EntityIdWireFormat.entityIdWireFormat(layout)
 
     def toWire(row: EntityRow, out: DataOutput) {
@@ -48,16 +53,13 @@ object EntityRow {
       }
     }
 
-    def fromWire(in: DataInput) = {
+    def fromWire(in: DataInput): EntityRow = fromWire(in, Kiji.Factory.open(instanceUri).openTable(tableUri.getTable))
+
+    def fromWire(in: DataInput, table: KijiTable): EntityRow = {
       val entityId = entityIdWf.fromWire(in)
-      table match {
-        case hbaseTable: HBaseKijiTable => {
-          val result = new Result
-          result.readFields(in)
-          EntityRow(entityId, new HBaseKijiRowData(entityId, request, hbaseTable, result))
-        }
-        case other => throw new Exception(s"can't deserialise a row for the table ${table.getName}")
-      }
+      val result = new Result
+      result.readFields(in)
+      EntityRow(entityId, new HBaseKijiRowData(entityId, request, table.asInstanceOf[HBaseKijiTable], result))
     }
   }
 }

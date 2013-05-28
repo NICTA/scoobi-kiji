@@ -19,15 +19,9 @@ import org.apache.commons.logging.LogFactory
  * Methods for creating DLists from Kiji tables and columns
  */
 trait KijiInput {
-  def fromRequest(instance: String, layoutPath: String, tableName: String, request: KijiDataRequest) : DList[EntityRow] = {
-    val source = KijiSource(instance, layoutPath, tableName, request)
-
-    val layout = KijiTableLayout.createFromEffectiveJson(new FileInputStream(layoutPath))
-    val kiji = Kiji.Factory.open(KijiURI.newBuilder(instance).build)
-    val table = kiji.openTable(tableName)
-    table.release
-    kiji.release
-    DListImpl[EntityRow](source)(EntityRow.entityValueHasWireFormat(layout, table, request))
+  def fromRequest(table: KijiTable, request: KijiDataRequest) : DList[EntityRow] = {
+    val source = KijiSource(table.getURI, request)
+    DListImpl[EntityRow](source)(EntityRow.entityValueHasWireFormat(table, request))
   }
 }
 
@@ -36,41 +30,21 @@ object KijiInput extends KijiInput
 /**
  * Scoobi DataSource for a Kiji column
  *
- * @param instance uri of the Kiji instance
- * @param layoutPath path for the table layout
- *
  */
-case class KijiSource(instance: String, layoutPath: String, tableName: String, request: KijiDataRequest) extends DataSource[KijiKey, KijiRow, EntityRow] {
+case class KijiSource(@transient tableUri: KijiURI, @transient request: KijiDataRequest) extends DataSource[KijiKey, KijiRow, EntityRow] {
 
   private implicit lazy val logger = LogFactory.getLog("scoobi.KijiSource")
 
-  /**
-   * get the table URI by opening the Kiji instance and getting the table from its table name
-   */
-  lazy val tableUri: Option[KijiURI] = {
-    var kiji: Kiji = null
-    try {
-      kiji = Kiji.Factory.open(KijiURI.newBuilder(instance).build)
-      var table: KijiTable = null
-      try {
-        table = kiji.openTable(tableName)
-        Option(table.getURI)
-      } catch { case e: Throwable => logger.error(e); None } finally Option(table).foreach(_.release)
-    } catch { case e: Throwable => logger.error(e); None} finally Option(kiji).foreach(_.release)
-  }
-
   def inputFormat: Class[_ <: InputFormat[KijiKey, KijiRow]] = classOf[KijiInputFormat]
 
-  def inputCheck(implicit sc: ScoobiConfiguration) {
-    if (!tableUri.isDefined) throw new IOException(s"Table URI $tableName does not exist.")
-  }
+  def inputCheck(implicit sc: ScoobiConfiguration) {}
 
   /**
    * During the configuration we build a request object and serialise it in the Configuration properties
    */
   def inputConfigure(job: Job)(implicit sc: ScoobiConfiguration) {
     job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_DATA_REQUEST, Base64.encodeBase64String(SerializationUtils.serialize(request)))
-    job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_TABLE_URI,    tableUri.map(_.toString).getOrElse(""))
+    job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_TABLE_URI,    tableUri.toString)
   }
 
   def inputSize(implicit sc: ScoobiConfiguration): Long = 0

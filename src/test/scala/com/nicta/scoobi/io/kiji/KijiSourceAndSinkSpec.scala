@@ -22,9 +22,9 @@ class KijiSourceAndSinkSpec extends KijiSpecification with Grouped { def is = s2
     eg := { implicit sc: SC =>
       onTable("table", "simple.json") {
         put("1", "family", "column", "hello")  >>
-        put("1", "family", "column", "hello2") >> get {
+        put("1", "family", "column", "hello2") >> tableRun { table =>
           val request: KijiDataRequest = KijiDataRequest.create("family")
-          val values = fromRequest(sc.configuration.get(KIJI_TEST_URI), layoutDir+"simple.json", "table", request).run.map(_.family[String]("column"))
+          val values = fromRequest(table, request).map(_.family[String]("column")).run
           values must_== Vector("hello2")
         }
       }
