@@ -2,15 +2,23 @@ package com.nicta.scoobi
 package io
 package kiji
 
-import testing.KijiCommands
+import testing._
 import testing.mutable.KijiSpecification
-import org.kiji.schema.{EntityIdFactory, EntityId}
+import org.kiji.schema._
+import impl._
+import org.apache.hadoop.hbase._
+import io.ImmutableBytesWritable
 import core.WireFormat
-import java.io.{DataInputStream, ByteArrayInputStream, DataOutputStream, ByteArrayOutputStream}
+import java.io._
+import org.specs2.specification.Grouped
+import org.specs2.mock.Mockito
+import scalaz._; import Scalaz._
+import EntityRow._
 
-class EntityValueSpec extends KijiSpecification {                                                     s2"""
+class EntityValueSpec extends KijiSpecification with Grouped with Mockito {                            s2"""
 
- An EntityValue encapsulate a value of type A, with an associated WireFormat and its EntityId
+ An EntityValue encapsulates a value of type A, with an associated WireFormat and its EntityId
+
  + an EntityId has a WireFormat which just serializes the key bytes
  + an EntityValue has a WireFormat for the key and the value
                                                                                                         """
@@ -23,12 +31,20 @@ class EntityValueSpec extends KijiSpecification {                               
       serialisationIsOkWith(entityId)
     }
     eg := { implicit sc: SC =>
-      val  layout = createLayout("simple.json")
-      implicit val wf = EntityIdWireFormat.entityIdWireFormat(layout)
+      onTable("table", "simple.json") {
+        tableRun { table =>
+          val layout = createLayout("simple.json")
+          val entityId = EntityIdFactory.getFactory(layout).getEntityId("key")
+          val keyValues = Array(KeyValue.LOWESTKEY)
 
-      val entityId = EntityIdFactory.getFactory(layout).getEntityId("key")
-      val entityValue = EntityValue(entityId, "string")
-      serialisationIsOkWith(entityValue)
+          val result = new org.apache.hadoop.hbase.client.Result(keyValues)
+
+          val entityValue = EntityRow(entityId, new HBaseKijiRowData(entityId, KijiDataRequest.create("family"), table.asInstanceOf[HBaseKijiTable], result))
+          implicit val wf = entityValueHasWireFormat(layout, table, KijiDataRequest.create("family"))
+
+          serialisationIsOkWith(entityValue)
+        }
+      }
     }
 
   }
@@ -46,5 +62,5 @@ class EntityValueSpec extends KijiSpecification {                               
     implicitly[WireFormat[T]].fromWire(new DataInputStream(bais))
   }
 
-  override def context = inMemory
+  override def context = inMemory.flatMap(sc => new KijiContext(sc))
 }

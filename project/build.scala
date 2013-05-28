@@ -60,7 +60,9 @@ object build extends Build {
       "org.easymock"           %  "easymock"        % "3.1"              ,
       "org.kiji.schema"        %  "kiji-schema"     % "1.0.3"            classifier "tests",
       "org.kiji.testing"       %  "fake-hbase_2.10" % "0.0.5"            ,
-      "org.specs2"             %% "specs2"          % "2.0-RC1-SNAPSHOT"),
+      "org.specs2"             %% "specs2"          % "2.0-RC2-SNAPSHOT",
+      "org.mockito"            %  "mockito-all"     % "1.9.0"),
+
     resolvers ++= Seq(
       "wibidata" at "https://repo.wibidata.com/artifactory/kiji",
       "sonatype-releases" at "http://oss.sonatype.org/content/repositories/releases",
@@ -68,8 +70,7 @@ object build extends Build {
     )
 
   lazy val compilationSettings: Seq[Settings] = Seq(
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
-    scalacOptions in Test ++= Seq("-Yrangepos")
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_")
   )
 
   lazy val testingSettings: Seq[Settings] = Seq(

@@ -24,13 +24,11 @@ case class KijiContext(sc: ScoobiConfiguration) extends Fixture[ScoobiConfigurat
   lazy val kiji = {
     val instanceName = String.format("%s_%s", "instance", "test")
     val hbaseAddress = f".fake.%s-%d".format(instanceName, instanceCounter.getAndIncrement)
-
     val uri = KijiURI.newBuilder(String.format("kiji://%s/%s", hbaseAddress, instanceName)).build
     sc.set(KIJI_TEST_URI, uri)
     KijiInstaller.get.install(uri, kijiConfiguration)
     Kiji.Factory.open(uri, kijiConfiguration)
   }
-
 
   def apply[R : AsResult](f: ScoobiConfiguration => R) =
     try     AsResult(f(configureForKiji(sc)))
