@@ -121,7 +121,7 @@ object build extends Build {
    */
   lazy val releaseSettings =
     ReleasePlugin.releaseSettings ++ Seq(
-    tagName <<= (version in ThisBuild) map (v => "SCOOBI-KIJI" + v),
+    tagName <<= (version in ThisBuild) map (v => "SCOOBI-KIJI-" + v),
     releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
       inquireVersions,
