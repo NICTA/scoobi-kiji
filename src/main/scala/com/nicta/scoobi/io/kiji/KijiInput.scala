@@ -19,11 +19,14 @@ import org.apache.commons.logging.LogFactory
  * Methods for creating DLists from Kiji tables and columns
  */
 trait KijiInput {
-  def fromMostRecentValues[A : WireFormat : KijiFormat](instance: String, layoutPath: String, table: String, family: String, qualifier: String) : DList[EntityValue[A]] = {
-    val source = KijiSource(instance, layoutPath, table, family, qualifier, MostRecentValues)(wireFormat[A], kijiFormat[A])
+  def fromRequest(instance: String, layoutPath: String, tableName: String, request: KijiDataRequest) : DList[EntityRow] = {
+    val source = KijiSource(instance, layoutPath, tableName, request)
 
-    val entityIdWf = EntityIdWireFormat.entityIdWireFormat(KijiTableLayout.createFromEffectiveJson(new FileInputStream(layoutPath)))
-    DListImpl[EntityValue[A]](source)(EntityValue.entityValueHasWireFormat(entityIdWf, wireFormat[A]))
+    val layout = KijiTableLayout.createFromEffectiveJson(new FileInputStream(layoutPath))
+    val kiji = Kiji.Factory.open(KijiURI.newBuilder(instance).build)
+    val table = kiji.openTable(tableName); table.release
+    kiji.release
+    DListImpl[EntityRow](source)(EntityRow.entityValueHasWireFormat(layout, table, request))
   }
 }
 
@@ -34,14 +37,9 @@ object KijiInput extends KijiInput
  *
  * @param instance uri of the Kiji instance
  * @param layoutPath path for the table layout
- * @param tableName table name
- * @param family column family
- * @param qualifier column qualifier
- * @param access access mode, i.e. specification of the values to retrieve: most recent, in a time range
  *
  */
-case class KijiSource[A : WireFormat : KijiFormat](instance: String, layoutPath: String, tableName: String,
-                                                   family: String, qualifier: String, access: KijiRowAccess) extends DataSource[KijiKey, KijiRow, EntityValue[A]] {
+case class KijiSource(instance: String, layoutPath: String, tableName: String, request: KijiDataRequest) extends DataSource[KijiKey, KijiRow, EntityRow] {
 
   private implicit lazy val logger = LogFactory.getLog("scoobi.KijiSource")
 
@@ -70,46 +68,20 @@ case class KijiSource[A : WireFormat : KijiFormat](instance: String, layoutPath:
    * During the configuration we build a request object and serialise it in the Configuration properties
    */
   def inputConfigure(job: Job)(implicit sc: ScoobiConfiguration) {
-    val request = buildRequest(KConstants.BEGINNING_OF_TIME, KConstants.END_OF_TIME, family, qualifier)
-
     job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_DATA_REQUEST, Base64.encodeBase64String(SerializationUtils.serialize(request)))
     job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_TABLE_URI,    tableUri.map(_.toString).getOrElse(""))
   }
 
   def inputSize(implicit sc: ScoobiConfiguration): Long = 0
 
-  def inputConverter: InputConverter[KijiKey, KijiRow, EntityValue[A]] = KijiInputConverter[A](family, qualifier, access)
-
-  /**
-   * build a data request for the desired column with minTime and maxTime as constraints
-   */
-  private def buildRequest(minTime: Long, maxTime: Long, family: String, qualifier: String) = {
-    val builder = KijiDataRequest.builder.withTimeRange(minTime, maxTime)
-    builder.addColumns(builder.newColumnsDef.add(family, qualifier)).build
-  }
+  def inputConverter: InputConverter[KijiKey, KijiRow, EntityRow] = KijiInputConverter(request)
 
 }
 
 /**
  * The KijiInputConverter specifies which value to extract from a given Kiji data row and key
  */
-case class KijiInputConverter[A : KijiFormat : WireFormat](family: String, qualifier: String, access: KijiRowAccess) extends InputConverter[KijiKey, KijiRow, EntityValue[A]] {
-  def fromKeyValue(context: InputContext, key: KijiKey, row: KijiRow): EntityValue[A] = {
-    if (access == MostRecentValues) EntityValue(key.get, implicitly[KijiFormat[A]].fromKiji(row.get.getMostRecentValue[A](family, qualifier)))
-    else throw new Exception(s"undefined access $access")
-  }
-}
-
-sealed trait KijiRowAccess {
-  def getName: String
-  override def equals(a: Any) = {
-    a match {
-      case access: KijiRowAccess => getName == access.getName
-      case _ => false
-    }
-  }
-}
-object MostRecentValues extends KijiRowAccess {
-  def getName = "most recent"
+case class KijiInputConverter(request: KijiDataRequest) extends InputConverter[KijiKey, KijiRow, EntityRow] {
+  def fromKeyValue(context: InputContext, key: KijiKey, row: KijiRow): EntityRow = EntityRow(key.get, row.get)
 }
 
