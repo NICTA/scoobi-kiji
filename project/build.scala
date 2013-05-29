@@ -63,8 +63,9 @@ object build extends Build {
       "org.specs2"             %% "specs2"          % "2.0-RC1",
       "org.mockito"            %  "mockito-all"     % "1.9.0"),
     resolvers ++= Seq(
-      "wibidata" at "https://repo.wibidata.com/artifactory/kiji",
-      "sonatype-releases" at "http://oss.sonatype.org/content/repositories/releases",
+      "nicta"              at "https://nicta.github.io/scoobi/releases", 
+      "wibidata"           at "https://repo.wibidata.com/artifactory/kiji",
+      "sonatype-releases"  at "http://oss.sonatype.org/content/repositories/releases",
       "sonatype-snapshots" at "http://oss.sonatype.org/content/repositories/snapshots")
     )
 
