@@ -22,6 +22,8 @@ import org.apache.avro.generic.IndexedRecord
 import avro.AvroFixed
 import avro.AvroSchema
 import org.apache.avro.generic.GenericData
+import shapeless._
+
 
 /**
  * The KijiFormat type class translates types coming from/going to HBase from/to Scala types
@@ -36,7 +38,7 @@ trait KijiFormat[T] {
  */
 object KijiFormat {
 
-  implicit def kijiFormat[A : KijiFormat] = implicitly[KijiFormat[A]]
+  implicit def kijiFormat[A](implicit kfa: KijiFormat[A]): KijiFormat[A] = kfa
 
   implicit def longKijiFormat: KijiFormat[Long] = new KijiFormat[Long] {
     def toKiji(t: Long) = t
@@ -81,5 +83,20 @@ object KijiFormat {
     def toKiji(t: T) = schema.toAvro(t)
     def fromKiji(t: Any) = schema.fromAvro(t.asInstanceOf[schema.AvroType])
   }
+
+  implicit def hnilHasKijiFormat: KijiFormat[HNil] = new KijiFormat[HNil] {
+    def toKiji(t: HNil): Any = java.util.Arrays.asList()
+    def fromKiji(t: Any): HNil = HNil
+  }
+
+  implicit def hlistHasKijiFormat[T, H1 <: HList](implicit kft: KijiFormat[T], kfh1: KijiFormat[H1]): KijiFormat[T :: H1] = new KijiFormat[T :: H1] {
+    def toKiji(hlist: T :: H1): Any = hlist match {
+      case head :: rest => (kft.toKiji(head) +: kfh1.toKiji(rest).asInstanceOf[java.util.List[Any]].asScala).asJava
+    }
+    def fromKiji(list: Any): T :: H1 = list.asInstanceOf[Seq[Any]].toList match {
+      case head +: rest => kft.fromKiji(head) :: kfh1.fromKiji(rest)
+    }
+  }
+
 }
 

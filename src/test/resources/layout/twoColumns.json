@@ -1,0 +1,15 @@
+{
+  name : "table",
+  version: "layout-1.1",
+  keys_format: { encoding: "HASH", hash_type : "MD5", hash_size : 16 },
+  locality_groups : [
+    { name : "default", in_memory : false, max_versions : 3, ttl_seconds : 2147483647, compression_type : "GZ",
+      families : [ {
+        name : "family",
+        columns : [
+          { name : "column1", column_schema : { type : "INLINE", value : '"string"' } },
+          { name : "column2", column_schema : { type : "INLINE", value : '"int"' } }
+        ]
+      } ]
+    } ]
+}

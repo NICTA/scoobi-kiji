@@ -25,6 +25,7 @@ import scala.collection.JavaConversions._
 import org.kiji.schema.impl.{HBaseKijiTable, HBaseKijiRowData}
 import org.apache.hadoop.hbase.client.Result
 import KijiFormat._
+import shapeless.HList
 
 /**
  * This class represents a single value from a Kiji data row.
@@ -32,8 +33,19 @@ import KijiFormat._
  * It has an entity id and a well-typed value
  */
 case class EntityRow(entityId: EntityId, data: KijiRowData) extends Dynamic {
-  def applyDynamic[T : KijiFormat](family: String)(qualifier: String): T = kijiFormat[T].fromKiji(data.getMostRecentValue[T](family, qualifier))
-  def selectDynamic[T : KijiFormat](family: String)(qualifier: String): Seq[T] = data.getMostRecentValues[T](family).values.toSeq.map(kijiFormat[T].fromKiji)
+
+  /** this implements row.family(qualifiers) and returns the latest values for some columns */
+  def applyDynamic[H <: HList : KijiFormat](family: String)(qualifiers: String*): H  = {
+    val values = qualifiers.map(qualifier => data.getMostRecentValue[Any](family, qualifier))
+    val format = implicitly[KijiFormat[H]]
+    format.fromKiji(values)
+  }
+
+  /** this implements row.family_qualifier and returns a sequence containing the latest value for this column */
+  def selectDynamic[T : KijiFormat](column: String): T = {
+    val family :: qualifier :: _ = column.split("_").toList
+    kijiFormat[T].fromKiji(data.getMostRecentValue[T](family, qualifier))
+  }
 
   override def equals(a: Any) = a match {
     case other: EntityRow => entityId == other.entityId
