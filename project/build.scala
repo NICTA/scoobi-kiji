@@ -52,19 +52,21 @@ object build extends Build {
 
   lazy val dependenciesSettings: Seq[Settings] = Seq(
     libraryDependencies ++= Seq(
-      "com.nicta"              %% "scoobi"          % "0.7.0-RC1-cdh4",
-      "org.kiji.schema"        %  "kiji-schema"     % "1.0.3",
-      "org.kiji.mapreduce"     %  "kiji-mapreduce"  % "1.0.0-rc62"       % "provided",
-      "org.apache.hbase"       %  "hbase"           % "0.94.3",
+      "com.nicta"              %% "scoobi"          % "0.7.0-RC2-cdh4-SNAPSHOT",
+      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT" withSources(),
+      "org.kiji.mapreduce"     %  "kiji-mapreduce"  % "1.0.0-rc63-SNAPSHOT" % "provided" withSources(),
+      "org.apache.hbase"       %  "hbase"           % "0.94.2-cdh4.2.1" withSources(),
       "cglib"                  %  "cglib-nodep"     % "2.2.2"            ,
       "org.easymock"           %  "easymock"        % "3.1"              ,
-      "org.kiji.schema"        %  "kiji-schema"     % "1.0.3"            classifier "tests",
-      "org.kiji.testing"       %  "fake-hbase_2.10" % "0.0.5"            ,
-      "org.specs2"             %% "specs2"          % "2.0-RC1",
+      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT"  classifier "tests" withSources(),
+      "org.kiji.testing"       %  "fake-hbase_2.10" % "0.1.0"            ,
+      "org.specs2"             %% "specs2"          % "2.0-RC2-SNAPSHOT",
       "org.mockito"            %  "mockito-all"     % "1.9.0"),
     resolvers ++= Seq(
       "nicta"              at "http://nicta.github.io/scoobi/releases/", 
+      "maven-local"        at "file://"+Path.userHome.absolutePath+"/.m2/repository", 
       "wibidata"           at "https://repo.wibidata.com/artifactory/kiji",
+      "wibidata-snapshots" at "https://repo.wibidata.com/artifactory/kiji-nightly",
       "sonatype-releases"  at "http://oss.sonatype.org/content/repositories/releases",
       "sonatype-snapshots" at "http://oss.sonatype.org/content/repositories/snapshots")
     )

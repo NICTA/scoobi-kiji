@@ -18,23 +18,36 @@ package io
 package kiji
 
 import KijiInput._
+import KijiOutput._
 import Scoobi._
 import testing.{KijiCommands, KijiSpecification}
 import scalaz.syntax.monad._
 import org.specs2.specification.Grouped
-import org.kiji.schema.KijiDataRequest
+import org.kiji.schema._
 import org.kiji.schema.KijiDataRequestBuilder.ColumnsDef
 import shapeless._
-import java.io.{DataInput, DataOutput}
+import com.nicta.scoobi.testing.TestFiles
+import org.specs2.matcher._
 
-class KijiSourceAndSinkSpec extends KijiSpecification with Grouped { def is = s2"""
+class KijiSourceAndSinkSpec extends KijiSpecification with Grouped with TestFiles with FileMatchers { def is = s2"""
 
- A Kiji table can be used as a Source for DLists. You first need to pass the table path, and then it is possible to read
- values by passing in a Kiji DataRequest object
+ This project provides some specific source and sinks to work with Kiji tables. A `KijiTable` can be used as a `Source` for DLists and a `DList` can be persisted as a `HFile` which can then be bulk-loaded into Kiji.
+
+Sources
+=======
+
+ In order to use a Kiji table as a Data Source for a DList, you need to pass the source table, a `KijiDataRequest`, and then you get a `DList` which values are `KijiDataRows`
 
   for example to retrieve the most recent values
     + for a single column
     + for several columns
+
+Sinks
+=====
+
+ It is possible, as well, to persist a Scoobi collection to a `HFile` which can then be loaded into Kiji. The `DList` must contain elements of type `EntityValue`, encapsulating an `entityId`, a column (family + qualifier), a timestamp and a value.
+
+  + persisting a simple 'hello' value should create a `HFile`
 
 """
 
@@ -71,16 +84,18 @@ class KijiSourceAndSinkSpec extends KijiSpecification with Grouped { def is = s2
     }
   }
 
-  implicit def hnilHasWireFormat: WireFormat[HNil] = new WireFormat[HNil] {
-    def toWire(x: HNil, out: DataOutput) {}
-    def fromWire(in: DataInput) = HNil
-  }
-
-  implicit def hlistHasWireFormat[T, H1 <: HList](implicit wft: WireFormat[T], wfh1: WireFormat[H1]): WireFormat[T :: H1] = new WireFormat[T :: H1] {
-    def toWire(hlist: T :: H1, out: DataOutput) = hlist match {
-      case head :: rest => wft.toWire(head, out); wfh1.toWire(rest, out)
+  "use a HFile as a sink" - new group with KijiCommands {
+    eg := { implicit sc: SC =>
+      onTable("table", "simple.json") {
+        tableRun { table =>
+          val file = createTempFile("hbase")
+          implicit val wf = EntityValue.wireFormat[String](table.getLayout)
+          DList(EntityValue.create(table.getEntityId("1"), "family", "column", 123456, "hello")).toHFile(file.getPath, table).run
+          file must beAFile
+          file.listFiles must not be empty
+        }
+      }
     }
-    def fromWire(in: DataInput) = wft.fromWire(in) :: wfh1.fromWire(in)
   }
 
 }

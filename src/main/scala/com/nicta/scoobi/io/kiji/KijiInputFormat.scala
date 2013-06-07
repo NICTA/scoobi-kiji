@@ -69,7 +69,7 @@ case class KijiInputFormat() extends InputFormat[KijiKey, KijiRow] with Configur
 
           val tableSplit = new TableSplit(htable.getTableName, region.getStartKey, region.getEndKey, location)
 
-          new KijiTableSplit(new org.kiji.mapreduce.impl.KijiTableSplit(tableSplit, region.getStartKey)).asInstanceOf[InputSplit]
+          new KijiTableSplit(new org.kiji.mapreduce.impl.KijiTableSplit(tableSplit)).asInstanceOf[InputSplit]
         }.asJava
       }
     }
