@@ -60,7 +60,7 @@ object build extends Build {
       "org.easymock"           %  "easymock"        % "3.1"              ,
       "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT"  classifier "tests" withSources(),
       "org.kiji.testing"       %  "fake-hbase_2.10" % "0.1.0"            ,
-      "org.specs2"             %% "specs2"          % "2.0-RC2-SNAPSHOT",
+      "org.specs2"             %% "specs2"          % "2.0",
       "org.mockito"            %  "mockito-all"     % "1.9.0"),
     resolvers ++= Seq(
       "nicta"              at "http://nicta.github.io/scoobi/releases/", 
