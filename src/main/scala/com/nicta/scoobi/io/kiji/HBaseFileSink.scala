@@ -15,6 +15,7 @@ import org.kiji.schema.impl.DefaultKijiCellEncoderFactory
 import com.nicta.scoobi.core._
 import org.apache.hadoop.io.compress.CompressionCodec
 import org.apache.hadoop.io.SequenceFile.CompressionType
+import org.kiji.mapreduce.output.HFileMapReduceJobOutput
 
 trait KijiOutput {
   implicit class ToHFile[T](val list: DList[EntityValue[T]]) {
@@ -34,6 +35,7 @@ class HBaseFileSink[T](path: String, @transient table: KijiTable, check: Sink.Ou
   def outputFormat(implicit sc: ScoobiConfiguration): Class[_ <: OutputFormat[HFileKeyValue, NullWritable]] = classOf[KijiHFileOutputFormat]
   def outputKeyClass(implicit sc: ScoobiConfiguration) = classOf[HFileKeyValue]
   def outputValueClass(implicit sc: ScoobiConfiguration) =  classOf[NullWritable]
+
   override def outputSetup(implicit configuration: Configuration) {
     val kiji = Kiji.Factory.open(KijiURI.newBuilder(instanceUri).build)
     val layout = kiji.openTable(KijiURI.newBuilder(tableUri).build.getTable)
@@ -44,6 +46,11 @@ class HBaseFileSink[T](path: String, @transient table: KijiTable, check: Sink.Ou
   def outputPath(implicit sc: ScoobiConfiguration) = Some(output)
   def outputConfigure(job: Job)(implicit sc: ScoobiConfiguration) {
     job.getConfiguration.set(KijiConfKeys.KIJI_OUTPUT_TABLE_URI, table.getURI.toString)
+    new HFileMapReduceJobOutput(table.getURI, new Path(path)).configure(job)
+  }
+  override def outputTeardown(implicit configuration: Configuration) {
+    converter.table.release
+    converter.kiji.release
   }
 
   def compressWith(codec: CompressionCodec, compressionType: CompressionType = CompressionType.BLOCK) = this
@@ -64,7 +71,7 @@ object EntityValue {
   }
 }
 
-class HFileKeyValueConverter[T](kiji: Kiji, table: KijiTable) extends OutputConverter[HFileKeyValue, NullWritable, EntityValue[T]] {
+class HFileKeyValueConverter[T](val kiji: Kiji, val table: KijiTable) extends OutputConverter[HFileKeyValue, NullWritable, EntityValue[T]] {
   private val columnNameTranslator = new ColumnNameTranslator(table.getLayout)
 
   def toKeyValue(kv: EntityValue[T])(implicit configuration: Configuration): (HFileKeyValue, NullWritable) = {

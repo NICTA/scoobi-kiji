@@ -28,6 +28,7 @@ import org.kiji.schema.KijiDataRequestBuilder.ColumnsDef
 import shapeless._
 import com.nicta.scoobi.testing.TestFiles
 import org.specs2.matcher._
+import org.kiji.mapreduce.tools.KijiBulkLoad
 
 class KijiSourceAndSinkSpec extends KijiSpecification with Grouped with TestFiles with FileMatchers { def is = s2"""
 
@@ -88,13 +89,22 @@ Sinks
     eg := { implicit sc: SC =>
       onTable("table", "simple.json") {
         tableRun { table =>
-          val file = createTempFile("hbase")
+          val file = createTempDir("hbase")
           implicit val wf = EntityValue.wireFormat[String](table.getLayout)
           DList(EntityValue.create(table.getEntityId("1"), "family", "column", 123456, "hello")).toHFile(file.getPath, table).run
           file must beAFile
           file.listFiles must not be empty
+
+          // now load the hfile back into Kiji
+          val loader = new KijiBulkLoad
+          loader.setConf(sc.configuration)
+          loader.toolMain(java.util.Arrays.asList("--hfile="+file.getPath, "--table="+table.getURI.toString))
+
+          val request: KijiDataRequest = KijiDataRequest.create("family")
+          val values = fromRequest(table, request).map(_.family_column[String]).run
+          values must_== Vector("hello")
         }
-      }
+      }.pendingUntilFixed
     }
   }
 

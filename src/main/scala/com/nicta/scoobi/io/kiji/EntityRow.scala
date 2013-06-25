@@ -86,7 +86,7 @@ object EntityRow {
       val entityId = entityIdWf.fromWire(in)
       val result = new Result
       result.readFields(in)
-      EntityRow(entityId, new HBaseKijiRowData(entityId, request, table.asInstanceOf[HBaseKijiTable], result))
+      EntityRow(entityId, new HBaseKijiRowData(table.asInstanceOf[HBaseKijiTable], request, entityId, result, null))
     }
   }
 }

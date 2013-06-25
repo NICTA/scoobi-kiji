@@ -54,7 +54,7 @@ class EntityRowSpec extends KijiSpecification with Grouped with Mockito {       
 
           val result = new org.apache.hadoop.hbase.client.Result(keyValues)
 
-          val entityValue = EntityRow(entityId, new HBaseKijiRowData(entityId, KijiDataRequest.create("family"), table.asInstanceOf[HBaseKijiTable], result))
+          val entityValue = EntityRow(entityId, new HBaseKijiRowData(table.asInstanceOf[HBaseKijiTable], KijiDataRequest.create("family"), entityId, result, null))
           implicit val wf = entityValueHasWireFormat(table, KijiDataRequest.create("family"))
           val serialised = serialise(entityValue)
           val deserialised = {
