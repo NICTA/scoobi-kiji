@@ -19,6 +19,7 @@ package io.kiji
 import org.apache.hadoop.mapreduce._
 import org.kiji.mapreduce.framework.KijiConfKeys
 import org.kiji.schema.{KijiRegion, KijiTable, Kiji, KijiURI}
+import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.client.HTableInterface
 import org.kiji.schema.impl.HBaseKijiTable
 import org.apache.hadoop.hbase.mapreduce.TableSplit
@@ -51,6 +52,16 @@ case class KijiInputFormat() extends InputFormat[KijiKey, KijiRow] with Configur
   def setConf(conf: Configuration) { configuration = conf }
   def getConf = configuration
 
+  private def sliding2[T](i: List[T]): List[(T, T)] = i match {
+    case f :: s :: r => (f, s) :: sliding2(s :: r)
+    case _ => List()
+  }
+
+  private def splitKeyRange(s: Array[Byte], e: Array[Byte], f: Int): Array[Array[Byte]] = f match {
+    case 0 => Array(s, e) // Bytes.split doesn't handle the 0 case
+    case i => Bytes.split(s, e, f)
+  }
+
   override def getSplits(context: JobContext): java.util.List[InputSplit] = {
     val conf = Option(configuration).getOrElse(context.getConfiguration)
     val uriString: String = Option(conf.get(KijiConfKeys.KIJI_INPUT_TABLE_URI)).getOrElse(throw new IOException(s"There should be a $KIJI_INPUT_TABLE_URI entry in the configuration"))
@@ -60,16 +71,20 @@ case class KijiInputFormat() extends InputFormat[KijiKey, KijiRow] with Configur
       doAndRelease(kiji.openTable(inputTableURI.getTable)) { table: KijiTable =>
         val htable: HTableInterface = HBaseKijiTable.downcast(table).getHTable
 
-        table.getRegions.asScala.map { region: KijiRegion =>
+        val splitFctr = conf.getInt(KijiScoobiConfKeys.REGION_SPLIT_FACTOR_KEY, 1) - 1
+        table.getRegions.asScala.flatMap { region: KijiRegion =>
           // TODO(KIJIMR-65): For now pick the first available location (ie. region server),
           //     if any.
           val location =
             if (region.getLocations.isEmpty) null
             else                             region.getLocations.iterator.next.replaceAll(":.*", "")
 
-          val tableSplit = new TableSplit(htable.getTableName, region.getStartKey, region.getEndKey, location)
-
-          new KijiTableSplit(new org.kiji.mapreduce.impl.KijiTableSplit(tableSplit)).asInstanceOf[InputSplit]
+          val rStartKey = region.getStartKey
+          val rEndKey = if(region.getEndKey.isEmpty) region.getStartKey.map(_ => 0xFF.asInstanceOf[Byte]) else region.getEndKey
+          for((s, e) <- sliding2(splitKeyRange(rStartKey, rEndKey, splitFctr).toList)) yield {
+            val tableSplit = new TableSplit(htable.getTableName, s, e, location)
+            new KijiTableSplit(new org.kiji.mapreduce.impl.KijiTableSplit(tableSplit)).asInstanceOf[InputSplit]
+          }
         }.asJava
       }
     }

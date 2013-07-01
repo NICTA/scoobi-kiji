@@ -44,7 +44,8 @@ trait KijiInput {
 object KijiInput extends KijiInput
 
 case class ScoobiKijiScanOpts(blockCaching: Boolean = false,
-                              prefetch: Int = 1) { }
+                              prefetch: Int = 1,
+                              splitFactor: Int = 1) { }
 
 /**
  * Scoobi DataSource for a Kiji column
@@ -68,6 +69,7 @@ case class KijiSource(@transient tableUri: KijiURI,
     job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_TABLE_URI,          tableUri.toString)
     job.getConfiguration.set(KijiScoobiConfKeys.BLOCK_CACHING_KEY,       scanOpts.blockCaching.toString)
     job.getConfiguration.set(KijiScoobiConfKeys.SERVER_PREFETCH_KEY,     scanOpts.prefetch.toString)
+    job.getConfiguration.set(KijiScoobiConfKeys.REGION_SPLIT_FACTOR_KEY, scanOpts.splitFactor.toString)
   }
 
   def inputSize(implicit sc: ScoobiConfiguration): Long = 0
