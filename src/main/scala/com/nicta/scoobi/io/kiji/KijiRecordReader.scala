@@ -46,8 +46,13 @@ import Resources.doAndRelease
 import org.kiji.mapreduce.framework.KijiConfKeys
 import org.kiji.schema._
 import org.kiji.schema.KijiTableReader.KijiScannerOptions
+import org.kiji.schema.hbase.HBaseScanOptions
+import org.apache.commons.logging.LogFactory
+
+import io.text.TextInput.AnInt
 
 final class KijiRecordReader extends RecordReader[KijiKey, KijiRow] {
+  private implicit lazy val logger = LogFactory.getLog("scoobi.KijiRecordReader")
   private var configuration: Configuration = new Configuration
   private var split: KijiTableSplit = _
 
@@ -77,10 +82,31 @@ final class KijiRecordReader extends RecordReader[KijiKey, KijiRow] {
       doAndRelease(kiji.openTable(inputURI.getTable))(_.openTableReader)
     }
   }
+
+  def b2h(bytes: Array[Byte]): String = bytes.map("%02x" format _).mkString
+
   private lazy val scanner: KijiRowScanner = {
+    val startRow = split.getStartRow
+    val endRow = split.getEndRow
+    logger.info("Start key: " + b2h(startRow))
+    logger.info("End key: " + b2h(endRow))
+
     val scannerOptions: KijiScannerOptions = new KijiScannerOptions()
-      .setStartRow(HBaseEntityId.fromHBaseRowKey(split.getStartRow))
-      .setStopRow(HBaseEntityId.fromHBaseRowKey(split.getEndRow))
+      .setStartRow(HBaseEntityId.fromHBaseRowKey(startRow))
+      .setStopRow(HBaseEntityId.fromHBaseRowKey(endRow))
+
+    logger.info("Locations: " + split.getLocations().mkString(","))
+    val hbaseScanOptions = new HBaseScanOptions()
+
+    val bc = configuration.getBoolean(KijiScoobiConfKeys.BLOCK_CACHING_KEY, true)
+    logger.info("Turning block cache " + (if(bc) "on" else "off"))
+    hbaseScanOptions.setCacheBlocks(bc)
+
+    val sp = configuration.getInt(KijiScoobiConfKeys.SERVER_PREFETCH_KEY, 1)
+    logger.info("Setting row buffer to " + sp)
+    hbaseScanOptions.setServerPrefetchSize(sp)
+
+    scannerOptions.setHBaseScanOptions(hbaseScanOptions)
 
     reader.getScanner(dataRequest, scannerOptions)
   }

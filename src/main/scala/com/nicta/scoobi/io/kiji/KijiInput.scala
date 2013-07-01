@@ -34,19 +34,25 @@ import org.apache.commons.logging.LogFactory
  * Methods for creating DLists from Kiji tables and columns
  */
 trait KijiInput {
-  def fromRequest(table: KijiTable, request: KijiDataRequest) : DList[EntityRow] = {
-    val source = KijiSource(table.getURI, request)
+  def fromRequest(table: KijiTable, request: KijiDataRequest,
+                  scanOpts: ScoobiKijiScanOpts = ScoobiKijiScanOpts()) : DList[EntityRow] = {
+    val source = KijiSource(table.getURI, request, scanOpts)
     DListImpl[EntityRow](source)(EntityRow.entityValueHasWireFormat(table, request))
   }
 }
 
 object KijiInput extends KijiInput
 
+case class ScoobiKijiScanOpts(blockCaching: Boolean = false,
+                              prefetch: Int = 1) { }
+
 /**
  * Scoobi DataSource for a Kiji column
  *
  */
-case class KijiSource(@transient tableUri: KijiURI, @transient request: KijiDataRequest) extends DataSource[KijiKey, KijiRow, EntityRow] {
+case class KijiSource(@transient tableUri: KijiURI,
+                      @transient request: KijiDataRequest,
+                      @transient scanOpts: ScoobiKijiScanOpts) extends DataSource[KijiKey, KijiRow, EntityRow] {
 
   private implicit lazy val logger = LogFactory.getLog("scoobi.KijiSource")
 
@@ -58,8 +64,10 @@ case class KijiSource(@transient tableUri: KijiURI, @transient request: KijiData
    * During the configuration we build a request object and serialise it in the Configuration properties
    */
   def inputConfigure(job: Job)(implicit sc: ScoobiConfiguration) {
-    job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_DATA_REQUEST, Base64.encodeBase64String(SerializationUtils.serialize(request)))
-    job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_TABLE_URI,    tableUri.toString)
+    job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_DATA_REQUEST,       Base64.encodeBase64String(SerializationUtils.serialize(request)))
+    job.getConfiguration.set(KijiConfKeys.KIJI_INPUT_TABLE_URI,          tableUri.toString)
+    job.getConfiguration.set(KijiScoobiConfKeys.BLOCK_CACHING_KEY,       scanOpts.blockCaching.toString)
+    job.getConfiguration.set(KijiScoobiConfKeys.SERVER_PREFETCH_KEY,     scanOpts.prefetch.toString)
   }
 
   def inputSize(implicit sc: ScoobiConfiguration): Long = 0
