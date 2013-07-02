@@ -65,7 +65,7 @@ case class KijiInputFormat() extends InputFormat[KijiKey, KijiRow] with Configur
           //     if any.
           val location =
             if (region.getLocations.isEmpty) null
-            else                             region.getLocations.iterator.next
+            else                             region.getLocations.iterator.next.replaceAll(":.*", "")
 
           val tableSplit = new TableSplit(htable.getTableName, region.getStartKey, region.getEndKey, location)
 
