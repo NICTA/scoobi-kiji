@@ -15,7 +15,7 @@ import org.kiji.schema.impl.DefaultKijiCellEncoderFactory
 import com.nicta.scoobi.core._
 import org.apache.hadoop.io.compress.CompressionCodec
 import org.apache.hadoop.io.SequenceFile.CompressionType
-import org.kiji.mapreduce.output.HFileMapReduceJobOutput
+import org.kiji.mapreduce.output.MapReduceJobOutputs
 
 trait KijiOutput {
   implicit class ToHFile[T](val list: DList[EntityValue[T]]) {
@@ -36,7 +36,7 @@ class HBaseFileSink[T](path: String, @transient table: KijiTable, check: Sink.Ou
   def outputKeyClass(implicit sc: ScoobiConfiguration) = classOf[HFileKeyValue]
   def outputValueClass(implicit sc: ScoobiConfiguration) =  classOf[NullWritable]
 
-  override def outputSetup(implicit configuration: Configuration) {
+  override def outputSetup(implicit configuration: ScoobiConfiguration) {
     val kiji = Kiji.Factory.open(KijiURI.newBuilder(instanceUri).build)
     val layout = kiji.openTable(KijiURI.newBuilder(tableUri).build.getTable)
     converter = new HFileKeyValueConverter(kiji, layout)
@@ -46,9 +46,9 @@ class HBaseFileSink[T](path: String, @transient table: KijiTable, check: Sink.Ou
   def outputPath(implicit sc: ScoobiConfiguration) = Some(output)
   def outputConfigure(job: Job)(implicit sc: ScoobiConfiguration) {
     job.getConfiguration.set(KijiConfKeys.KIJI_OUTPUT_TABLE_URI, table.getURI.toString)
-    new HFileMapReduceJobOutput(table.getURI, new Path(path)).configure(job)
+    MapReduceJobOutputs.newHFileMapReduceJobOutput(table.getURI, new Path(path)).configure(job)
   }
-  override def outputTeardown(implicit configuration: Configuration) {
+  override def outputTeardown(implicit configuration: ScoobiConfiguration) {
     converter.table.release
     converter.kiji.release
   }

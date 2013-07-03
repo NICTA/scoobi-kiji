@@ -52,16 +52,16 @@ object build extends Build {
 
   lazy val dependenciesSettings: Seq[Settings] = Seq(
     libraryDependencies ++= Seq(
-      "com.nicta"              %% "scoobi"          % "0.7.0-RC3-cdh4-SNAPSHOT",
-      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT",
-      "org.kiji.mapreduce"     %  "kiji-mapreduce"  % "1.0.0-rc63-SNAPSHOT" % "provided",
+      "com.nicta"              %% "scoobi"          % "0.7.1-cdh4",
+      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0",
+      "org.kiji.mapreduce"     %  "kiji-mapreduce"  % "1.0.0"           % "provided",
       "org.apache.hbase"       %  "hbase"           % "0.94.2-cdh4.2.1",
-      "cglib"                  %  "cglib-nodep"     % "2.2.2"               % "test",
-      "org.easymock"           %  "easymock"        % "3.1"                 % "test",
-      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT"      % "test" classifier "tests",
-      "org.kiji.testing"       %  "fake-hbase_2.10" % "0.1.0"               % "test",
-      "org.specs2"             %% "specs2"          % "2.0"                 % "test",
-      "org.mockito"            %  "mockito-all"     % "1.9.0"               % "test"),
+      "cglib"                  %  "cglib-nodep"     % "2.2.2"           % "test",
+      "org.easymock"           %  "easymock"        % "3.1"             % "test",
+      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0"           % "test" classifier "tests",
+      "org.kiji.testing"       %  "fake-hbase_2.10" % "0.1.0"           % "test",
+      "org.specs2"             %% "specs2"          % "2.0"             % "test",
+      "org.mockito"            %  "mockito-all"     % "1.9.0"           % "test"),
     resolvers ++= Seq(
       "nicta"              at "http://nicta.github.io/scoobi/releases/", 
       "maven-local"        at "file://"+Path.userHome.absolutePath+"/.m2/repository", 
