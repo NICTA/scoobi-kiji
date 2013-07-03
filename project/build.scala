@@ -56,12 +56,12 @@ object build extends Build {
       "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT",
       "org.kiji.mapreduce"     %  "kiji-mapreduce"  % "1.0.0-rc63-SNAPSHOT" % "provided",
       "org.apache.hbase"       %  "hbase"           % "0.94.2-cdh4.2.1",
-      "cglib"                  %  "cglib-nodep"     % "2.2.2"            ,
-      "org.easymock"           %  "easymock"        % "3.1"              ,
-      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT"  classifier "tests",
-      "org.kiji.testing"       %  "fake-hbase_2.10" % "0.1.0"            ,
-      "org.specs2"             %% "specs2"          % "2.0",
-      "org.mockito"            %  "mockito-all"     % "1.9.0"),
+      "cglib"                  %  "cglib-nodep"     % "2.2.2"               % "test",
+      "org.easymock"           %  "easymock"        % "3.1"                 % "test",
+      "org.kiji.schema"        %  "kiji-schema"     % "1.1.0-SNAPSHOT"      % "test" classifier "tests",
+      "org.kiji.testing"       %  "fake-hbase_2.10" % "0.1.0"               % "test",
+      "org.specs2"             %% "specs2"          % "2.0"                 % "test",
+      "org.mockito"            %  "mockito-all"     % "1.9.0"               % "test"),
     resolvers ++= Seq(
       "nicta"              at "http://nicta.github.io/scoobi/releases/", 
       "maven-local"        at "file://"+Path.userHome.absolutePath+"/.m2/repository", 
@@ -88,7 +88,7 @@ object build extends Build {
       else                             Some("staging" at nexus + "service/local/staging/deploy/maven2")
     },
     publishMavenStyle := true,
-    publishArtifact in Test := false,
+    publishArtifact in Test := true,
     pomIncludeRepository := { x => false },
     pomExtra := (
       <url>http://nicta.github.io/scoobi-kiji</url>
