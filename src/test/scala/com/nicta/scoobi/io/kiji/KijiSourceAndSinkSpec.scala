@@ -25,10 +25,12 @@ import scalaz.syntax.monad._
 import org.specs2.specification.Grouped
 import org.kiji.schema._
 import org.kiji.schema.KijiDataRequestBuilder.ColumnsDef
+import org.kiji.schema.filter.ColumnValueEqualsRowFilter
 import shapeless._
 import com.nicta.scoobi.testing.TestFiles
 import org.specs2.matcher._
 import org.kiji.mapreduce.tools.KijiBulkLoad
+import org.apache.avro.Schema
 
 class KijiSourceAndSinkSpec extends KijiSpecification with Grouped with TestFiles with FileMatchers { def is = s2"""
 
@@ -42,6 +44,7 @@ Sources
   for example to retrieve the most recent values
     + for a single column
     + for several columns
+    + using a row filter
 
 Sinks
 =====
@@ -80,6 +83,28 @@ Sinks
 
           val values = fromRequest(table, request).map(_.family[String :: Int :: HNil]("column1", "column2")).run
           values must_== Vector("hello2" :: 2 :: HNil, "hi2" :: 4 :: HNil)
+        }
+      }
+    }
+
+    eg := { implicit sc: SC =>
+      onTable("table", "twoColumns.json") {
+        put("1", "family", "column1", "true")  >>
+        put("2", "family", "column1", "false") >>
+        put("3", "family", "column1", "true")  >>
+        put("4", "family", "column1", "false")  >>
+        put("1", "family", "column2", 1) >>
+        put("2", "family", "column2", 2) >>
+        put("3", "family", "column2", 3) >>
+        put("4", "family", "column2", 4) >>
+          tableRun { table =>
+          val request: KijiDataRequest = KijiDataRequest.builder.
+            addColumns(ColumnsDef.create.add("family", "column1").add("family", "column2")).build
+
+          val filterString = new DecodedCell[String](Schema.create(Schema.Type.STRING), "true")
+          val filter = new ColumnValueEqualsRowFilter("family", "column1", filterString)
+          val values = fromRequest(table, request, filter=Some(filter)).map(_.family[String :: Int :: HNil]("column1", "column2")).run
+          values must_== Vector("true" :: 1 :: HNil, "true" :: 3 :: HNil)
         }
       }
     }
