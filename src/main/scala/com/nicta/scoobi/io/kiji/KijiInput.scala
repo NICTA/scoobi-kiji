@@ -23,6 +23,7 @@ import java.io.{FileInputStream, IOException}
 import org.apache.hadoop.mapreduce._
 import org.kiji.schema._
 import layout.KijiTableLayout
+import org.kiji.schema.filter.KijiRowFilter
 import org.kiji.mapreduce.framework.KijiConfKeys
 import WireFormat._
 import KijiFormat._
@@ -35,8 +36,9 @@ import org.apache.commons.logging.LogFactory
  */
 trait KijiInput {
   def fromRequest(table: KijiTable, request: KijiDataRequest,
-                  scanOpts: ScoobiKijiScanOpts = ScoobiKijiScanOpts()) : DList[EntityRow] = {
-    val source = KijiSource(table.getURI, request, scanOpts)
+                  scanOpts: ScoobiKijiScanOpts = ScoobiKijiScanOpts(),
+                  filter: Option[KijiRowFilter] = None) : DList[EntityRow] = {
+    val source = KijiSource(table.getURI, request, scanOpts, filter)
     DListImpl[EntityRow](source)(EntityRow.entityValueHasWireFormat(table, request))
   }
 }
@@ -53,7 +55,8 @@ case class ScoobiKijiScanOpts(blockCaching: Boolean = false,
  */
 case class KijiSource(@transient tableUri: KijiURI,
                       @transient request: KijiDataRequest,
-                      @transient scanOpts: ScoobiKijiScanOpts) extends DataSource[KijiKey, KijiRow, EntityRow] {
+                      @transient scanOpts: ScoobiKijiScanOpts,
+                      @transient filter: Option[KijiRowFilter]) extends DataSource[KijiKey, KijiRow, EntityRow] {
 
   private implicit lazy val logger = LogFactory.getLog("scoobi.KijiSource")
 
@@ -70,6 +73,7 @@ case class KijiSource(@transient tableUri: KijiURI,
     job.getConfiguration.set(KijiScoobiConfKeys.BLOCK_CACHING_KEY,       scanOpts.blockCaching.toString)
     job.getConfiguration.set(KijiScoobiConfKeys.SERVER_PREFETCH_KEY,     scanOpts.prefetch.toString)
     job.getConfiguration.set(KijiScoobiConfKeys.REGION_SPLIT_FACTOR_KEY, scanOpts.splitFactor.toString)
+    filter.foreach(f => job.getConfiguration.set(KijiConfKeys.KIJI_ROW_FILTER, f.toJson().toString()))
   }
 
   def inputSize(implicit sc: ScoobiConfiguration): Long = 0

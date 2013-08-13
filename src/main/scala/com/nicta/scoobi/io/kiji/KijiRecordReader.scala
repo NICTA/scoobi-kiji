@@ -47,6 +47,7 @@ import org.kiji.mapreduce.framework.KijiConfKeys
 import org.kiji.schema._
 import org.kiji.schema.KijiTableReader.KijiScannerOptions
 import org.kiji.schema.hbase.HBaseScanOptions
+import org.kiji.schema.filter.KijiRowFilter
 import org.apache.commons.logging.LogFactory
 
 import io.text.TextInput.AnInt
@@ -94,6 +95,11 @@ final class KijiRecordReader extends RecordReader[KijiKey, KijiRow] {
     val scannerOptions: KijiScannerOptions = new KijiScannerOptions()
       .setStartRow(HBaseEntityId.fromHBaseRowKey(startRow))
       .setStopRow(HBaseEntityId.fromHBaseRowKey(endRow))
+
+    for { 
+      filterJson <- Option(configuration.get(KijiConfKeys.KIJI_ROW_FILTER))
+      filter = KijiRowFilter.toFilter(filterJson)
+    } scannerOptions.setKijiRowFilter(filter)
 
     logger.info("Locations: " + split.getLocations().mkString(","))
     val hbaseScanOptions = new HBaseScanOptions()
